@@ -11,14 +11,16 @@ void setup() {
   pinMode(STATUS_LED_PIN, OUTPUT);
   digitalWrite(STATUS_LED_PIN, LOW);
 
-  Serial.begin(115200);
+  Serial.begin(9600);
 }
 
 void loop() {
   // Commands are 3 bytes long: 1 byte of parameter index and 2 bytes of value
-	while (Serial.available() >= 2) {
-    int idx = Serial.read();
+	while (Serial.available() >= 3) {
+    if (Serial.read() != 0xA0) continue;
+    int idx = Serial.read() & 0x0F;
     int value = Serial.read();
+    if (Serial.read() != 0xAF) continue;
 
     assert(idx > 0 && idx < NUM_PARAMS, "illegal index!");
     
@@ -32,11 +34,11 @@ void loop() {
 
 	for (int i = 0; i < NUM_PARAMS; i++)
 	{
-		Serial.write(i);
+		Serial.write(i | (1 << 8));
     Serial.write(parameters[i]);
 	}
 
-//  delay(10);
+  delay(100);
 }
 
 /**
@@ -56,8 +58,11 @@ void assert(bool maybe, const String &message) {
  * NOTE: THIS METHOD NEVER RETURNS
  */
 void panic(const String &message) {
-  Serial.print("PANIC: ");
-  Serial.println(message);
+//  Serial.print("PANIC: ");
+//  Serial.println(message);
+  for (int i = 0; i < 16; i++) {
+    Serial.write(0xFF);
+  }
   digitalWrite(STATUS_LED_PIN, HIGH);
 
   while(1);
