@@ -35,9 +35,6 @@ void setup() {
 }
 
 void loop() {
-  // Read from the analog sensors
-  int leftIR = analogRead(LEFT_IR_PIN);
-  int rightIR = analogRead(RIGHT_IR_PIN);
 
   Serial.print("1,");
   Serial.print(speed);
