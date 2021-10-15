@@ -1,6 +1,6 @@
 #define STATUS_LED_PIN 13
 
-#define LEFT_IR_PIN A2
+#define LEFT_IR_PIN A0
 #define RIGHT_IR_PIN A3
 
 void setup() {
@@ -20,12 +20,12 @@ void setup() {
 void loop() {
   // Read from the analog sensors
   int leftIR = analogRead(LEFT_IR_PIN);
-  int rightIR = analogRead(RIGHT_IR_PIN);
+//  int rightIR = analogRead(RIGHT_IR_PIN);
 
   Serial.print("1,");
-  Serial.print(leftIR);
-  Serial.print(",");
-  Serial.println(rightIR);
+  Serial.println(leftIR);
+  //Serial.print(",");
+ // Serial.println(rightIR);
 
   delay(100);
 }

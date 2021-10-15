@@ -6,20 +6,21 @@
 #define LEFT_MOTOR_PORT 3
 #define RIGHT_MOTOR_PORT 4
 
-#define LEFT_IR_PIN A1
+#define LEFT_IR_PIN A
 #define RIGHT_IR_PIN A2
 
 #define NUM_PARAMS 8
+#define SERIAL_UPDATE_INTERVAL 100
 
-// There are 16 parameter slots than can be set, each holds an unsigned 8 bit integer
+// There are 8 parameter slots than can be set, each holds an unsigned 8 bit integer
 // Currently:
-// 0 = left speed
-// 1 = right speed
-// 2 = left direction (0 = forward, 1 = reverse)
-// 3 = left direction (0 = forward, 1 = reverse)
-// 4 = left IR sensor reading  (read only)
-// 5 = right IR sensor reading (read only)
-// 6 = unused
+// 0 = base speed
+// 1 = adjustment speed
+// 2 = current left speed              (read only)
+// 3 = current right speed             (read only)
+// 4 = current left IR sensor reading  (read only)
+// 5 = current right IR sensor reading (read only)
+// 6 = IR cuttoff (divided by 4 for size reasons)
 // 7 = unused
 uint8_t parameters[NUM_PARAMS]; 
 
@@ -45,17 +46,38 @@ void setup() {
 void loop() {
   receive_commands();
 
-  // Read from the analog sensors
-  parameters[4] = analogRead(LEFT_IR_PIN);
-  parameters[5] = analogRead(RIGHT_IR_PIN);
+  // 0 = base speed
+  // 1 = adjustment speed
+  // 2 = current left speed              (read only)
+  // 3 = current right speed             (read only)
+  // 4 = current left IR sensor reading  (read only)
+  // 5 = current right IR sensor reading (read only)
+  // 6 = IR cuttoff (divided by 4 for size reasons)
+  // 7 = unused
 
-  leftMotor->run(parameters[2] ? BACKWARD : FORWARD);
-  rightMotor->run(parameters[3] ? BACKWARD : FORWARD);
-  leftMotor->setSpeed(parameters[0]);
-  rightMotor->setSpeed(parameters[1]);
+  // Read from the analog sensors
+  int leftIR = parameters[4] = analogRead(LEFT_IR_PIN);
+  int rightIR = parameters[5] = analogRead(RIGHT_IR_PIN);
+  int cutoffIR = parameters[6];
+
+  int leftSpeed = parameters[0];
+  int rightSpeed = parameters[0];
+
+  if (leftIR >= cutoffIR) {
+    leftSpeed += parameters[1];
+  } else if (rightIR >= cutoffIR) {
+    rightSpeed += parameters[1];
+  }
+
+	leftMotor->run(FORWARD);
+  rightMotor->run(FORWARD);
+	leftMotor->setSpeed(leftSpeed);
+  rightMotor->setSpeed(rightSpeed);
+
+  parameters[2] = leftSpeed;
+  parameters[3] = rightSpeed;
 
   send_values();
-  delay(100);
 }
 
 void receive_commands() {
@@ -72,7 +94,10 @@ void receive_commands() {
 	}
 }
 
+int last_serial_write = 0;
 void send_values() {
+  if (millis() - last_serial_write < SERIAL_UPDATE_INTERVAL) return;
+
 	Serial.write(0xFF);
 	Serial.write(0xAA);
   Serial.write(0xFF);
@@ -83,6 +108,8 @@ void send_values() {
 		Serial.write(i | (1 << 8));
     Serial.write(parameters[i]);
 	}
+
+  last_serial_write = millis();
 }
 
 /**
